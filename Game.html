@@ -1,0 +1,610 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+	<title>junkeirinha gueimimipreis</title>
+	<script src="game.js"></script>
+	<style type="text/css">
+		#div
+		{
+			width: 20px;
+			height: 25px;
+			background-color: white;
+		}
+	</style>
+</head>
+<body onkeyup="">
+<p>
+<button onclick="startAnimation()">Iniciar animação/ aumentar velocidade</button><button onclick="fixBall()">Reiniciar bola</button><button id="useKeyboard" onclick="abilityKeyboardPort()">Modo um jogador: Mouse</button><button id="playType" onclick="changePTM()">Match (melhor de 3)</button><button id="difButton" onclick="changeDifficulty()">Dificuldade: Fácil</button></p><div onclick="hack()" id="div"></div>
+
+<canvas id="gameCanvas" width="800" height="600"></canvas>
+<script type="text/javascript">
+//declaração de variáveis
+	//canvas do HTML
+	var canvas;
+	//Contexto do canvas
+	var canvasCont;
+	//coordenada horizontal da bola
+	var ballX = 100;
+	//coordenada vertical da bola
+	var ballY = 100;
+	//velocidade horizontal da bola
+	var ballXSpeed = 10;
+	//velocidade vertical da bola
+	var ballYSpeed = 10;
+	//Velocidade do jogo
+	var framesPerSecond = 60;
+	//variavel paddle1Y controla as barras, se aplicar paddle1Y para a segunda barra, o mouse irá controlar as duas barras
+	var paddle1Y = 250;
+	//segundo player
+	var paddle2Y= 250;
+	//altura das barrinhas
+	const PADDLE_HEIGHT = 100;
+	//Cheat
+	var hackOn = false; 
+	//variável de pergunta para usar o teclado ou não
+	var keyQuestion = 1;
+	//id do botão para alterar o texto conforme a opção escolhida
+	var buttonForkey = document.getElementById("useKeyboard");
+	//variável da Função para forçar o fim do jogo
+	var difTimer = 0;
+	//variável da Função para forçar o fim do jogo
+	var limit = 1500;
+	//velocidade do bot
+	var botSpeed = 3;
+	//Pontos do jogador 1
+	var p1Points = 0;
+	//pontos do jogador 2
+	var p2Points = 0;
+	//button para mudar o modo de pontos
+	var playType = document.getElementById('playType');
+	//variavel para mudar o modo de jogo
+	var playTypeMode = 0;
+	//Pontos da melhor pontuação
+	var bestPoints = 5;
+	//variavel best inteira para ser escrita no jogo
+	var best = "Melhor: " + bestPoints;
+	//butão da dificulade
+	var difButton = document.getElementById('difButton');
+	//Dar controle para o jogador dependendo de onde a bola acertar em seu retângulo
+	var deltaY;
+
+	//O que ocorrerá quando a página iniciar
+	window.onload = function () 
+	{
+		canvas = document.getElementById('gameCanvas');
+		canvasCont = canvas.getContext('2d');
+		writeRects(0, 0, canvas.width, canvas.height, 'black');
+		canvas.addEventListener('mousemove',
+		function(evt) {var mousePos = getMousePosition(evt);
+			paddle1Y = mousePos.y - (PADDLE_HEIGHT/2);
+		});
+	}
+
+	//Desenha o plano de fundo do canvas
+		function startAnimation()
+	{
+		resetBall();
+		canvas = document.getElementById('gameCanvas');
+		canvasCont = canvas.getContext('2d');
+		var timer = setInterval(startGame, 1000/framesPerSecond);
+	}
+
+	//Funções para o controle por mouse dos joadores
+	function abilityKeyboardPort()
+	{
+		resetGame();
+		++keyQuestion;
+		switch(keyQuestion)
+		{
+		case 1:
+   		buttonForkey.innerText = 'Modo um jogador: Mouse';
+   		moveUpDownPlayer2(true);
+   		break;
+
+   		case 2:
+   		document.addEventListener('keydown', getKeyboardInputFor1P);
+   		buttonForkey.innerText = 'Modo dois joadores: Mouse e setas'
+   		break;
+
+   		case 3:
+   		document.removeEventListener('keydown', getKeyboardInputFor1P);
+   		document.addEventListener('keydown', getKeyboardInputFor2P);
+   		buttonForkey.innerText = 'Modo dois joadores: Setas e WASD';
+   		break;
+
+   		case 4:
+   		document.removeEventListener('keydown', getKeyboardInputFor2P);
+   		buttonForkey.innerText = 'Modo um jogador: Mouse';
+   		keyQuestion = 1;
+   		break;
+
+   		}
+    }
+
+    function getKeyboardInputFor1P(event)
+    {
+    	if(event.keyCode == 38 ) 
+   		{
+        	paddle2Y -= 15;
+    	}
+    	else if (event.keyCode == 40)
+    	{
+    		paddle2Y += 15;
+    	}
+    	if(paddle2Y >= 520)
+    	{
+    		paddle2Y = 510;
+    	}
+    	else if (paddle2Y < 0)
+    	{
+    		paddle2Y = 1;
+    	}
+    }
+
+    function getKeyboardInputFor2P(event)
+    {
+    	if(event.keyCode == 38) 
+   		{
+        	paddle2Y -= 15;
+    	}
+    	else if (event.keyCode == 40)
+    	{
+    		paddle2Y += 15;
+    	}
+    	else if (event.keyCode == 87)
+    	{
+    		paddle1Y -= 15;
+    	}
+    	else if (event.keyCode == 83)
+    	{
+    		paddle1Y += 15;
+    	}
+    	if(paddle2Y >= 520)
+    	{
+    		paddle2Y = 510;
+    	}
+    	else if (paddle2Y < 0)
+    	{
+    		paddle2Y = 1;
+    	}
+    	if(paddle1Y >= 520)
+    	{
+    		paddle1Y = 510;
+    	}
+    	else if (paddle1Y < 0)
+    	{
+    		paddle1Y = 1;
+    	}
+    }
+	//Diminuir o código
+	function writeRects(leftX, topY, width, height, drawColor)
+	{
+		canvasCont.fillStyle = drawColor;
+		canvasCont.fillRect(leftX, topY, width, height);
+	}
+	function writeCircle(posX, posY, size, color)
+	{
+		canvasCont.fillStyle = color;
+		canvasCont.beginPath();
+		canvasCont.arc(posX, posY, size, 0,Math.PI*2, true);
+		canvasCont.fill();
+	}
+
+	//Pegar a localização do mouse e atribuí-la ao primeiro retângulo do lado esquerdo mais tarde.
+	function getMousePosition(evt) 
+	{	
+		var rect = canvas.getBoundingClientRect();
+		var root = document.documentElement;
+		var mouseX = evt.clientX - rect.left - root.scrollLeft;
+		var mouseY = evt.clientY - rect.top - root.scrollTop;
+		return {
+			x:mouseX,
+			y:mouseY
+		};
+	}
+	//Animação para a bola quicar
+	function startGame()
+	{
+		changePlayType();
+		moveUpDownPlayer2();
+		difficultyUp();
+		ballX += ballXSpeed;
+		ballY += ballYSpeed;
+		console.log("Posição atual (X):" + ballX + ", Posição atual (Y):" + ballY);
+		writeRects(0, 0, canvas.width, canvas.height, 'black');
+		
+		if (ballY <= 14)
+		{
+			ballYSpeed = -ballYSpeed;
+		}
+		if (hackOn === true)
+		{
+			writeRects(0, paddle1Y, 20, PADDLE_HEIGHT, 'red');
+		}
+		else
+		{
+		writeRects(0, paddle1Y, 20, PADDLE_HEIGHT, 'white');
+		}
+		writeRects(780, paddle2Y, 20, PADDLE_HEIGHT, 'white');
+		// 			   Posição         tamanho
+
+		//bola que quica
+		writeCircle(ballX, ballY, 10, 'white');
+		/*if (hackOn === true && ballX === 0)
+		{
+			ballXSpeed = -ballXSpeed;
+		}*/
+		if(ballX <= 14 && hackOn === true) 
+		{
+			hackBall();
+		}
+		else
+		{
+
+		}
+		if(ballX <= 14 && ballY > paddle1Y && ballY < paddle1Y + PADDLE_HEIGHT && hackOn === false) 
+		{
+			ballXSpeed = -ballXSpeed;
+			var deltaY = ballY -(paddle1Y + PADDLE_HEIGHT/2);
+			ballYSpeed = deltaY * 0.25;
+		} 
+		else if (ballX <= 14 && hackOn === false) 
+		{
+			resetBall();
+			ballXSpeed = -ballXSpeed;
+			p2Points++;
+			if (playTypeMode == 2)
+			{
+				resetPlayer();
+			}
+			else
+			{
+					
+			}
+		}
+		else
+		{
+
+		}
+		if(ballX >= canvas.width - 14) 
+		{	
+			if(ballY > paddle2Y && ballY < paddle2Y+PADDLE_HEIGHT)
+			{
+				ballXSpeed = +ballXSpeed;
+				var deltaY = ballY -(paddle2Y + PADDLE_HEIGHT/2);
+				ballYSpeed = deltaY * 0.25;
+			}
+			else
+			{
+				resetBall();
+				p1Points++;
+				ballXSpeed = +ballXSpeed;
+			}
+			if (hackOn === true)
+			{
+				hackBall();
+			}
+			else
+			{	
+				ballXSpeed = -ballXSpeed;
+			}
+		}
+		if(ballY <= 14) 
+		{
+			if (hackOn === true)
+			{
+				hackBall();
+			}
+			else
+			{
+				ballYSpeed = +ballYSpeed;
+			}
+		}
+		if(ballY > canvas.height - 14) 
+		{
+			if (hackOn === true)
+			{
+				hackBall();
+			}
+			else
+			{
+				ballYSpeed = -ballYSpeed;
+			}
+		}
+		//sistema para deixar os pontos no meio de acordo com a quantidade de caracteres
+		checkNumber(p1Points);
+		if (p2Points <= 10)
+		{
+		canvasCont.fillText(p2Points, canvas.width-100, 100);
+		//pequena decoração
+		writeRects(698, 105, 10, 1, 'white');
+		writeRects(698, 87, 10, 1, 'white');
+		}
+		else{}
+		checkNumber(p2Points);
+		canvasCont.fillText(best, canvas.width-100, 200);
+	}
+
+	//colocar a bola de volta no meio
+	function resetBall()
+	{
+		ballX = 350;
+		ballY = 250;
+		ballXSpeed = 5;
+		ballYSpeed = 5;
+		console.log("Bola resetada!");
+		difTimer = 0;
+		limit = 1500;
+		if(p1Points > bestPoints)
+		{
+			bestPoints += 2;
+			best = "Melhor: " + bestPoints;
+		}
+		else{}
+	}
+
+	function fixBall()
+	{
+		alert("Em alguns casos extremos a bola pode acabar saindo da área de jogo, use esse botão para trazer ela de volta.");
+		if(ballX < 0 || ballY < 0)
+		{
+			resetBall();
+			paddle2Y = 500;
+		}
+		else if (ballX > 800 || ballY > 600)
+		{
+			resetBall();
+			paddle2Y = 500;
+		}
+		else 
+		{
+			alert("A bola está dentro da área de jogo, não é necessário reiniciar a bola!");
+		}
+	}
+
+	//colocar o jogador no meio
+	function resetPlayer()
+	{
+		p1Points = 0;
+		p2Points = 0;
+	}
+
+	//reseta o jogo
+	function resetGame() 
+	{
+		resetBall();
+		resetPlayer();
+		ballYSpeed = 5;
+		ballXSpeed = 5;
+	}
+
+	function hack()
+	{
+		p1Points = 100;
+		if(hackOn === false)
+		{
+			var div = document.getElementById('div');
+			div.style.backgroundColor = 'red';
+			hackOn = true;
+			console.log("Trapaça ativada");
+			console.log("Trapaça ativada");
+			console.log("Trapaça ativada");
+		}
+		else
+		{
+			var div= document.getElementById('div');
+			div.style.backgroundColor = 'white';
+			hackOn = false;
+			console.log("Trapaça desativada");
+			console.log("Trapaça desativada");
+			console.log("Trapaça desativada");
+		}
+	}
+
+	function hackBall()
+	{
+		if (hackOn === true)
+		{
+		if(ballX <= 0) 
+		{
+			ballXSpeed = -ballXSpeed;	
+		}
+		if(ballX >= canvas.width) 
+		{
+			ballXSpeed = -ballXSpeed;
+		}
+		if(ballY <= 0) 
+		{
+			ballYSpeed = -ballYSpeed;
+		}
+		if(ballY >= canvas.height) 
+		{
+			ballYSpeed = -ballYSpeed;
+		}
+		if (ballY <= -30)
+		{
+			resetBall();
+		}
+		if (ballX <= -30)
+		{
+			resetBall();
+		}
+		}
+	}
+
+	//Controles do bot
+	function moveUpDownPlayer2 ()
+	{
+		var paddle2YCenter = paddle2Y + (PADDLE_HEIGHT/2);
+		if(paddle2YCenter < ballY-15 && keyQuestion == 1)
+		{
+			paddle2Y += botSpeed;
+		}
+		else if (paddle2YCenter == ballY)
+		{
+
+		}
+		else if (paddle2YCenter > ballY+15 && keyQuestion == 1)
+		{
+			paddle2Y -= botSpeed;
+		}
+	}
+
+	//aumentar dificuldade para forçar um ponto no jogo
+	function difficultyUp()
+	{
+		difTimer++;
+		if (difTimer >= limit)
+		{
+			ballXSpeed -= 3;
+			ballYSpeed -= 3;
+			limit += 700;
+		}
+		else{}
+	}
+
+	//Mudar o modo de jogo
+	function changePlayType()
+	{
+		switch (playTypeMode)
+		{
+			case 0:
+			checkMatchWin();
+			break;
+
+			case 2:
+			
+			break;
+		}
+	}
+
+	//checar se um dos jogadores ganhou por uma melhor de 3
+	function checkMatchWin()
+	{
+		if(p1Points === 2)
+		{
+			alert("Jogador 1 venceu!!!");
+			resetGame();
+		}
+		else if(p2Points === 2)
+		{
+			alert("Jogador 2 venceu!!!");
+			resetGame();
+		}
+	}
+
+	//função para mudar o valor da "pergunta" pq eu sou muito burro AAAAAAAAAA
+	function changePTM()
+	{	
+		playTypeMode++;
+		resetGame();
+		if(playTypeMode = 1)
+		{
+			playTypeMode = 2;
+			playType.innerText = 'Endless (Infinito e pontos registrados no "melhor")';
+		}
+		else if(playTypeMode = 3)
+		{
+			playTypeMode = 0;
+			playType.innerText = 'Match (Melhor de 3)';
+		}
+	}
+
+	//função para mudar a dificuldade
+	function changeDifficulty()
+	{
+		botSpeed += 3;
+		if (botSpeed == 15)
+		{
+			botSpeed = 3;
+		}
+		else{}
+		switch (botSpeed)
+		{
+			case 3:
+			difButton.innerText = 'Dificuldade: Fácil';
+			break;
+
+			case 6:
+			difButton.innerText = 'Dificuldade: Médio';
+			break;
+
+			case 9:
+			difButton.innerText = 'Dificuldade: Difícil';
+			break;
+
+			case 12:
+			difButton.innerText = 'Dificuldade: Impossível';
+			break;
+		}
+	}
+
+	//função para centralizar o texto do 'Melhor'
+	function checkNumber(question)
+	{
+		if (question === p1Points)
+		{
+			if(question >= 10 && question < 100)
+			{
+				canvasCont.fillText(question, 95, 100);
+				//pequena decoração
+				writeRects(98, 105, 10, 1, 'white');
+				writeRects(98, 87, 10, 1, 'white');
+			}	
+			else if (question <= 10)
+			{
+				canvasCont.fillText(question, 100, 100);
+				//pequena decoração
+				writeRects(98, 105, 10, 1, 'white');
+				writeRects(98, 87, 10, 1, 'white');
+			}
+			else if(question >= 100 && question < 1000)
+			{
+				canvasCont.fillText(question, 95, 100);
+				//pequena decoração
+				writeRects(98, 105, 10, 1, 'white');
+				writeRects(98, 87, 10, 1, 'white');
+			}
+			else if (question >= 1000 && question < 10000)
+			{
+				canvasCont.fillText(question, 90, 100);
+				//pequena decoração
+				writeRects(98, 105, 10, 1, 'white');
+				writeRects(98, 87, 10, 1, 'white');
+			}
+		}
+		else if (question === p2Points)
+		{
+			if(question >= 10 && question < 100)
+			{
+				canvasCont.fillText(p2Points, canvas.width-103, 100);
+				//pequena decoração
+				writeRects(698, 105, 10, 1, 'white');
+				writeRects(698, 87, 10, 1, 'white');
+			}	
+			else if (question <= 10)
+			{
+				canvasCont.fillText(p2Points, canvas.width-100, 100);
+				//pequena decoração
+				writeRects(698, 105, 10, 1, 'white');
+				writeRects(698, 87, 10, 1, 'white');
+			}
+			else if(question >= 100 && question < 1000)
+			{
+				canvasCont.fillText(p2Points, canvas.width-105, 100);
+				//pequena decoração
+				writeRects(698, 105, 10, 1, 'white');
+				writeRects(698, 87, 10, 1, 'white');
+			}
+			else if (question >= 1000 && question < 10000)
+			{
+				canvasCont.fillText(p2Points, canvas.width-110, 100);
+				//pequena decoração
+				writeRects(698, 105, 10, 1, 'white');
+				writeRects(698, 87, 10, 1, 'white');
+			}
+		}
+	}
+</script>
+</body>
+</html>
